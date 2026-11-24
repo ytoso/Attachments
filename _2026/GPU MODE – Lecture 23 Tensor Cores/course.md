@@ -9,7 +9,7 @@
 
 ## [00:00](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=0)
 
-![Screenshot at 00:00 in the video](images/image-400dd1ae523032c0120f187c.jpg)
+![Screenshot at 00:00 in the video](./images/image-400dd1ae523032c0120f187c.jpg)
 
 Hi and welcome, everyone, to today's CUDA Mode. So, Friday's special lecture about tensor cores. Today, I'm super excited to have our two absolute experts. Directly from NVIDIA, we have Vijay Thakkar, who is an architect at NVIDIA and is lead designer on CUTLASS and the CUTE project at NVIDIA, and his colleague, Pradeep Ramani, who's a senior architect, also working on CUTLASS.
 
@@ -25,13 +25,13 @@ Feel free to interrupt me. Anyway, let's dive right into it. So today's talk bas
 
 ## [02:31](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=151)
 
-![Screenshot at 02:31 in the video](images/image-637b9584309eaec758913bd4.jpg)
+![Screenshot at 02:31 in the video](./images/image-637b9584309eaec758913bd4.jpg)
 
 be walking you through some of the motivations behind CUTLASS, what tensor cores actually are, how we think about writing custom kernels that target Tensor Cores, what the programming model for them is, and end with a very nice demo that shows how to write a Hopper GEMM from scratch using CUTLASS. So, what are tensor cores? So...
 
 ## [02:50](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=170)
 
-![Screenshot at 02:50 in the video](images/image-4c152ced190f2f2cab8f7885.jpg)
+![Screenshot at 02:50 in the video](./images/image-4c152ced190f2f2cab8f7885.jpg)
 
 Let me set the stage for people who might not be familiar. This is by no means an extensive deep dive into what tensor cores are or why they exist in the first place, but to set the stage right for your mental model: it's a hardware-accelerated block that basically just does matrix multiplication. And the reason for that is that matrix multiplication has some very nice algorithmic properties.
 
@@ -41,7 +41,7 @@ The illustration on the right-hand side of the slide kind of shows you pictorial
 
 ## [03:43](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=223)
 
-![Screenshot at 03:43 in the video](images/image-99a248fcc8e0317aeadfe64f.jpg)
+![Screenshot at 03:43 in the video](./images/image-99a248fcc8e0317aeadfe64f.jpg)
 
 Tensor cores take a lot of different variants and shapes and forms. Over the years, the NVIDIA tensor cores have changed quite a lot, and on the screen right now, you can see five different generations of instructions that we use for implementing matrix multiplication. On the bottom left-hand side, you have the old-school pre-Tensor-Core era, where you only had thread-level multiplies.
 
@@ -53,13 +53,13 @@ And this is part of one of the fundamental complexities of writing programs that
 
 ## [04:49](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=289)
 
-![Screenshot at 04:49 in the video](images/image-86d9ba346da50eec803475c9.jpg)
+![Screenshot at 04:49 in the video](./images/image-86d9ba346da50eec803475c9.jpg)
 
 Why is it so hard? What's so hard about doing matrix multiplications?
 
 ## [04:53](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=293)
 
-![Screenshot at 04:53 in the video](images/image-b86e6df8cd0b6973afbb20bf.jpg)
+![Screenshot at 04:53 in the video](./images/image-b86e6df8cd0b6973afbb20bf.jpg)
 
 If you're doing matrix multiplications in Python or something—or conceptually just thinking about it in terms of linear algebra—it's actually very easy. We just have accumulated inner products of outer products, where we're basically iterating through tiles in the $A$ and $B$ matrices to compute one full tile within the output matrix, in this case labeled $C$. This is just a triple for loop.
 
@@ -69,19 +69,19 @@ There is a nested hierarchy of threads and a corresponding nested hierarchy of d
 
 ## [05:55](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=355)
 
-![Screenshot at 05:55 in the video](images/image-108c2664813522376b8c9cca.jpg)
+![Screenshot at 05:55 in the video](./images/image-108c2664813522376b8c9cca.jpg)
 
 which then further gets tiled to the thread level. And what becomes really difficult is keeping track of all these indices and data, and making sure your address arithmetic doesn't eat into your cost of actually doing the matrix multiplications.
 
 ## [06:09](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=369)
 
-![Screenshot at 06:09 in the video](images/image-70c03f30e4a3ac0bfe610f93.jpg)
+![Screenshot at 06:09 in the video](./images/image-70c03f30e4a3ac0bfe610f93.jpg)
 
 So, when we introduce Tensor Cores on top of this, which have their own custom layouts of threads and require the input operands to be in those layouts for correct execution, it becomes even harder, right? You kind of go away from this nice canonical triple for loop structure and turn it into this insanity of index bookkeeping. So this is one...
 
 ## [06:30](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=390)
 
-![Screenshot at 06:30 in the video](images/image-08535c2e391d946c258f6177.jpg)
+![Screenshot at 06:30 in the video](./images/image-08535c2e391d946c258f6177.jpg)
 
 One of the first problems is that there is no trivial way to express these SIMD-like loops that you would have on CPUs. In this case, I'm trying to show you the extent of the complexity here. It's best if you don't focus on the actual details here, but what I'm trying to illustrate is that, especially in the case of Volta, this is extremely difficult to even reason about in your head.
 
@@ -91,13 +91,13 @@ And then that gets spatially interleaved across the entire shared memory tile of
 
 ## [07:20](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=440)
 
-![Screenshot at 07:20 in the video](images/image-77518e79cbb27b94d5521d0c.jpg)
+![Screenshot at 07:20 in the video](./images/image-77518e79cbb27b94d5521d0c.jpg)
 
 That one warp's worth of units gets tiled across the entire SM, which is four subpartitions, which is four warps in this case. And then you have even more spatial reuse happening for getting vectorized loads out of shared memory. And all of this kind of gets crazy really quickly. So this is one of the first challenges of writing Tensor
 
 ## [07:40](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=460)
 
-![Screenshot at 07:40 in the video](images/image-cd3ce63c7a9f5c030ebe2fe2.jpg)
+![Screenshot at 07:40 in the video](./images/image-cd3ce63c7a9f5c030ebe2fe2.jpg)
 
 Core programs. So you have to really think about how to map these data elements logically to the actual physical stores where they belong. And this is what we would call a partitioning problem: figuring out what threads own which data elements. In the CUTLASS 2 timeframe, we had these hand-implemented layout functions that were custom for each tensor core operation, where, given an input coordinate.
 
@@ -105,13 +105,13 @@ The layout function would compute the index within which that element is. These 
 
 ## [08:27](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=507)
 
-![Screenshot at 08:27 in the video](images/image-19f830b887ac32348d5a32cf.jpg)
+![Screenshot at 08:27 in the video](./images/image-19f830b887ac32348d5a32cf.jpg)
 
 So this is the first problem.
 
 ## [08:29](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=509)
 
-![Screenshot at 08:29 in the video](images/image-e62b73772da38f4630f07a1f.jpg)
+![Screenshot at 08:29 in the video](./images/image-e62b73772da38f4630f07a1f.jpg)
 
 The second problem is that of asynchrony and programmer-managed synchronization. So this is one of the other key divergences between CPU linear algebra and GPU linear algebra, which is that we don't have a speculative out-of-order execution engine to extract parallelism out of our code and tolerate global memory latency. And what that means is...
 
@@ -119,19 +119,19 @@ Using shared memory, the programmer is required to set up a software pipeline of
 
 ## [09:14](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=554)
 
-![Screenshot at 09:14 in the video](images/image-7aef9c2f0bb7fe7c221001f9.jpg)
+![Screenshot at 09:14 in the video](./images/image-7aef9c2f0bb7fe7c221001f9.jpg)
 
 That implies that... Wait, we have one question on the slides that we had before: what was R
 
 ## [09:20](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=560)
 
-![Screenshot at 09:20 in the video](images/image-0b0207907397905b706edc51.jpg)
+![Screenshot at 09:20 in the video](./images/image-0b0207907397905b706edc51.jpg)
 
 MEM? Is this like register memory, or what is it? Yeah. So the mnemonics here are: SMEM is shared memory, RMEM is register memory, and GMEM is global memory. Okay. Good. General question: other slides, will they be available? Yeah, we'll post a curated version of the slides. Super! Great.
 
 ## [09:37](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=577)
 
-![Screenshot at 09:37 in the video](images/image-f22293455b5bd61cf8b2c0da.jpg)
+![Screenshot at 09:37 in the video](./images/image-f22293455b5bd61cf8b2c0da.jpg)
 
 So this is kind of an example of how crazy this gets. I wanted to show in both cases just how extreme things can get to extract performance out of Tensor Cores. And in this case, I have an example of a Hopper-optimized kernel, where you can see not only is there software pipelining, but there's a persistent algorithm which is actually computing multiple output tiles.
 
@@ -143,13 +143,13 @@ You do really need to start worrying about these latency-sensitive parts of your
 
 ## [10:42](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=642)
 
-![Screenshot at 10:42 in the video](images/image-00dfa4539755197f436e0e30.jpg)
+![Screenshot at 10:42 in the video](./images/image-00dfa4539755197f436e0e30.jpg)
 
 That's where CUTLASS comes in. What CUTLASS really does is it
 
 ## [10:46](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=646)
 
-![Screenshot at 10:46 in the video](images/image-2b1c19a41f14c0d6b6ce0602.jpg)
+![Screenshot at 10:46 in the video](./images/image-2b1c19a41f14c0d6b6ce0602.jpg)
 
 helps you set up a programming model and decompose the anatomy of a high-performance matrix multiply on NVIDIA architectures across the moving parts. So, CUTLASS is a C++ template library for high-performance linear algebra targeting both tensor cores and CUDA cores. And it provides a native tile-based programming model for GPUs. CUTLASS is quite old at this point.
 
@@ -159,7 +159,7 @@ All of this complexity is very difficult to reason about if you do not break it 
 
 ## [11:47](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=707)
 
-![Screenshot at 11:47 in the video](images/image-d3fcd0f09e678b1820bbac90.jpg)
+![Screenshot at 11:47 in the video](./images/image-d3fcd0f09e678b1820bbac90.jpg)
 
 To set the stage, the design goals of CUTLASS are the following. Its intent is to be a public tensor computation model for NVIDIA GPUs. It serves as a production-grade example for the world. CUTLASS is adopted across many key libraries. There are 300+ adopters, even within NVIDIA. It's used as a backend for libraries like cuBLAS, cuDNN, TensorRT-LLM, etc.
 
@@ -173,7 +173,7 @@ There's been a very large focus on reducing the API surface area of CUTLASS 3 co
 
 ## [13:10](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=790)
 
-![Screenshot at 13:10 in the video](images/image-beaebd91c713caf4140cc2bf.jpg)
+![Screenshot at 13:10 in the video](./images/image-beaebd91c713caf4140cc2bf.jpg)
 
 What does CUTLASS support today? It supports convolutions. Of course, we had matrix multiply from the get-go, but with CUTLASS 3.5, we have convolutions and tensor contractions. There are some LLM-specific optimizations like mixed-input GEMMs, and I'll cover a little bit of how that's implemented later as just a fusion on top of CUTLASS.
 
@@ -181,13 +181,13 @@ And we also support the Epilogue Visitor Tree, which allows people to write cust
 
 ## [13:42](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=822)
 
-![Screenshot at 13:42 in the video](images/image-3f0fff3c2354de3447702225.jpg)
+![Screenshot at 13:42 in the video](./images/image-3f0fff3c2354de3447702225.jpg)
 
 We also support FP8 data types that you might have heard of before. There is a very convenient pip wheel that CUTLASS has, and there's a lot more on GitHub that you can find.
 
 ## [13:54](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=834)
 
-![Screenshot at 13:54 in the video](images/image-627ee7fd2a792e4e783e3e73.jpg)
+![Screenshot at 13:54 in the video](./images/image-627ee7fd2a792e4e783e3e73.jpg)
 
 So, one of the other cool features about CUTLASS 3 is that it comes with a new core library and component called CuTe. I've seen a lot of confusion in the CUTLASS Discord about what CUTLASS 3 is and what CuTe is. CuTe is a core, integral component of CUTLASS. CUTLASS 3 is a superset of CuTe. What it is is two fundamental things. First of all, it provides us with a
 
@@ -197,13 +197,13 @@ They beautifully compose with swizzle functors, making the development of swizzl
 
 ## [14:55](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=895)
 
-![Screenshot at 14:55 in the video](images/image-8b84af36f6c8271af0768aa1.jpg)
+![Screenshot at 14:55 in the video](./images/image-8b84af36f6c8271af0768aa1.jpg)
 
 to the CuTe team is: what is multi-mode in this setting?
 
 ## [15:00](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=900)
 
-![Screenshot at 15:00 in the video](images/image-57921c39d8e9b04512fc34b6.jpg)
+![Screenshot at 15:00 in the video](./images/image-57921c39d8e9b04512fc34b6.jpg)
 
 Multi-mode over here would mean... For example, this shape is actually a 2D shape, right? But the second dimension here itself is a 2D shape. So this is a multi-mode. Then the question from someone asking is: 'CuTe was inspired by functional programming. Is this accurate to say?'
 
@@ -211,7 +211,7 @@ It's actually inspired by cuTENSOR and some of the use cases that arise during t
 
 ## [15:47](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=947)
 
-![Screenshot at 15:47 in the video](images/image-2999cf66caaa8c1844a762fd.jpg)
+![Screenshot at 15:47 in the video](./images/image-2999cf66caaa8c1844a762fd.jpg)
 
 So, why CuTe? I think I've already summarized this in the previous slide, but where we used to have these hand-implemented layout functions in CUTLASS 2, they've all been replaced by a single layout concept. Not only that, we also use layouts to represent thread layouts. So in CUTLASS 2, there was no such thing as a thread layout; there were only post-partition data layouts.
 
@@ -221,7 +221,7 @@ So there's been a lot of cool research enabled by easier treatment of layouts.
 
 ## [16:34](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=994)
 
-![Screenshot at 16:34 in the video](images/image-d227b6c55e2d8396e95a7cd2.jpg)
+![Screenshot at 16:34 in the video](./images/image-d227b6c55e2d8396e95a7cd2.jpg)
 
 So, what does CUTLASS 3 actually do with CuTe? Well, CUTLASS 3, as I said, is a superset of CuTe, and what we have done with it is to formalize a conceptual hierarchy of linear algebra components, in a way that decomposes the moving parts into orthogonal axes. Starting at the bottommost layer, we have the atom, what we call the atom layer.
 
@@ -241,13 +241,13 @@ As well as constructing the arguments coming from the host side and then mapping
 
 ## [19:24](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1164)
 
-![Screenshot at 19:24 in the video](images/image-792ea0d411a41674a9f910e8.jpg)
+![Screenshot at 19:24 in the video](./images/image-792ea0d411a41674a9f910e8.jpg)
 
 VJ, could you clarify what microkernel means in this?
 
 ## [19:29](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1169)
 
-![Screenshot at 19:29 in the video](images/image-35c4670ea82c7c3ec4ed4461.jpg)
+![Screenshot at 19:29 in the video](./images/image-35c4670ea82c7c3ec4ed4461.jpg)
 
 Yeah, a microkernel is basically, in this case, a subset that decomposes some fundamentally challenging component of doing linear algebra into an orthogonal axis. The only two layers that we care about are the spatial tiling—the spatial microkernel—and the temporal microkernel. The spatial microkernel describes a single tile's interleaving of all copy and math instructions.
 
@@ -257,7 +257,7 @@ That buys us a lot of simplification in the actual implementation of the library
 
 ## [20:30](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1230)
 
-![Screenshot at 20:30 in the video](images/image-971ef410d2a6d68a39b7af89.jpg)
+![Screenshot at 20:30 in the video](./images/image-971ef410d2a6d68a39b7af89.jpg)
 
 As for the learning curve and the API entry points, we've also made sure that for every layer in this hierarchy, there's basically a very minimal set of entry points into the actual CuTe types and API surface. So, spatial microkernels, as I said, are the CuTe tiled copy and MMA. The temporal microkernels are the collective MMA or convolution.
 
@@ -269,13 +269,13 @@ This lets you manage buffers and shared memory to make sure you don't have race 
 
 ## [21:52](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1312)
 
-![Screenshot at 21:52 in the video](images/image-457204a88b48894123294701.jpg)
+![Screenshot at 21:52 in the video](./images/image-457204a88b48894123294701.jpg)
 
 Okay, that's enough theory. Let's actually look at what a CUTLASS GEMM looks like.
 
 ## [21:58](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1318)
 
-![Screenshot at 21:58 in the video](images/image-363f50c5491365108468c10c.jpg)
+![Screenshot at 21:58 in the video](./images/image-363f50c5491365108468c10c.jpg)
 
 So here we go. I'm using a tensor contraction as an example, but it's just a more general version of a matrix multiply. Wherever you see contraction in this case—which is what GETT refers to: generalized tensor times tensor multiply—that's basically the same as a GEMM or a matrix multiply. So you can pretend they're just GEMMs. The way that works within CUTLASS is that you first set up your collective main loop.
 
@@ -285,7 +285,7 @@ What type you want to use for the accumulator? What's your tile shape and cluste
 
 ## [22:57](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1377)
 
-![Screenshot at 22:57 in the video](images/image-7584d77e8a87d950072fe0eb.jpg)
+![Screenshot at 22:57 in the video](./images/image-7584d77e8a87d950072fe0eb.jpg)
 
 The same applies to the epilogue as well, right? In the epilogue, you just tell us what your input element types for the $C$ and $D$ tensors are, what element compute type you actually want to use, and everything else can be left to auto. That gives you a collective epilogue. As I said earlier, the kernel layer is a composition of the main loop and the epilogue.
 
@@ -303,7 +303,7 @@ You may have a typical BLAS-3 GEMM that will compute $A \times B$, scale that re
 
 ## [25:21](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1521)
 
-![Screenshot at 25:21 in the video](images/image-dbc23ec096996136c2554a2b.jpg)
+![Screenshot at 25:21 in the video](./images/image-dbc23ec096996136c2554a2b.jpg)
 
 Diving deeper, this is kind of the dispatch mechanism for picking specific main loops. I don't want to spend too much time on this, but there are details here that you can refer to if you would like. But to reiterate, the collectives are templated microkernels that compute a single output tile. They basically make it easy for you to reuse them.
 
@@ -311,7 +311,7 @@ Because tuning these for performance is actually quite a challenging task, we do
 
 ## [26:04](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1564)
 
-![Screenshot at 26:04 in the video](images/image-4d2747b59906d6069315929f.jpg)
+![Screenshot at 26:04 in the video](./images/image-4d2747b59906d6069315929f.jpg)
 
 The kernel API is kind of a suggestion, so this is where the fusion capabilities really start shining. We provide you with a bunch of different collectives that can be composed freely with many different kernel schedules. The name of the game here is composability: the collectives for the main loop can be swapped out for given kernels if you want to do something custom.
 
@@ -321,7 +321,7 @@ I can just take any collective that I've implemented in the past and compose it 
 
 ## [26:56](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1616)
 
-![Screenshot at 26:56 in the video](images/image-ac8944103932d12f8ee7588c.jpg)
+![Screenshot at 26:56 in the video](./images/image-ac8944103932d12f8ee7588c.jpg)
 
 The Collective Builder that I showed earlier provides you with a convenience interface that also provides incremental updates. So this is what I had in the slide earlier, where everything was set to auto. But let's say, for example, you wanted more control over what exact kernel gets generated; in this case, I'm saying, 'I want a Hopper kernel, but this time with a persistent kernel schedule.'
 
@@ -329,13 +329,13 @@ And five stages in shared memory. And in that case, you can swap out the auto se
 
 ## [27:24](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1644)
 
-![Screenshot at 27:24 in the video](images/image-7849b9053e74e57dbb026c97.jpg)
+![Screenshot at 27:24 in the video](./images/image-7849b9053e74e57dbb026c97.jpg)
 
 For opt-ins. And these are incremental updates. Because what's actually happening behind the curtain is that this Collective Builder is taking these architecture-agnostic descriptions of your problem that have nothing to do with Tensor Cores and actually constructing the layouts needed to
 
 ## [27:40](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1660)
 
-![Screenshot at 27:40 in the video](images/image-eeb8ae95b367a8cf84432d27.jpg)
+![Screenshot at 27:40 in the video](./images/image-eeb8ae95b367a8cf84432d27.jpg)
 
 make Tensor Cores sing. So this is what that looks like. This was your input to the Collective Builder, and the builder is actually doing a lot of heuristics and analysis for you: to figure out the stage count and shared memory, the actual instructions to use for Hopper, the exact shared memory layout to use, the actual copy instructions to use, which schedule to compose with, etc.
 
@@ -345,25 +345,25 @@ lets you not have to worry about it and just focus on writing the actual fusion 
 
 ## [28:40](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1720)
 
-![Screenshot at 28:40 in the video](images/image-05717a4671e2b172c387ecc1.jpg)
+![Screenshot at 28:40 in the video](./images/image-05717a4671e2b172c387ecc1.jpg)
 
 Convolutions have a very similar API. It's exactly the same thing, frankly.
 
 ## [28:44](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1724)
 
-![Screenshot at 28:44 in the video](images/image-612297a112da38ada41318d2.jpg)
+![Screenshot at 28:44 in the video](./images/image-612297a112da38ada41318d2.jpg)
 
 Instead of giving your input strides as row-major or column-major, you're giving your convolution operation: fprop, dgrad, or wgrad, or whatever it may be. And the spatial dimension—you can have a 1D, 2D, or 3D convolution. Everything else basically remains the same. And what's
 
 ## [29:02](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1742)
 
-![Screenshot at 29:02 in the video](images/image-d2cb5eab7ad21a01635b997b.jpg)
+![Screenshot at 29:02 in the video](./images/image-d2cb5eab7ad21a01635b997b.jpg)
 
 happening behind the scenes is, again, the builder is going to take your description of the convolution problem that you want to implement and map it onto many of the complex strategies that are required to extract performance on the hardware.
 
 ## [29:16](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1756)
 
-![Screenshot at 29:16 in the video](images/image-ab20e5113c79682d69442433.jpg)
+![Screenshot at 29:16 in the video](./images/image-ab20e5113c79682d69442433.jpg)
 
 So, how does all of this help you write custom kernels that make Tensor Cores sing? I would posit that this decomposition and focus on reuse allows you to extract performance out of Tensor Cores by reusing as much of CUTLASS as possible. The intention of CUTLASS is to let people write custom kernels by making sure they can
 
@@ -371,7 +371,7 @@ take as much of CUTLASS that's already out there and only customize the part tha
 
 ## [29:42](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1782)
 
-![Screenshot at 29:42 in the video](images/image-c05a21fcfce27e2b3dd21764.jpg)
+![Screenshot at 29:42 in the video](./images/image-c05a21fcfce27e2b3dd21764.jpg)
 
 One of the most basic examples of this is to swap out, say, a collective for a custom collective, so you can write a custom main loop, which is the temporal microkernel, and compose with any existing schedule that we provide. So you don't have to rewrite the entire kernel; you just rewrite the main loop.
 
@@ -381,7 +381,7 @@ And just compose with any custom outer-loop schedule. All of this just beautiful
 
 ## [30:32](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1832)
 
-![Screenshot at 30:32 in the video](images/image-aa3dc42739499c92b41c7a15.jpg)
+![Screenshot at 30:32 in the video](./images/image-aa3dc42739499c92b41c7a15.jpg)
 
 This is also an example of a benefit of that. When you launch a kernel, you need to provide arguments for all the tensors and all the different configurations that are being operated on by the kernel itself. Making sure you have a hierarchical composition of this kernel means that if you switch out the epilogue, for example.
 
@@ -391,7 +391,7 @@ And this mirrors in the hierarchy.
 
 ## [31:18](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1878)
 
-![Screenshot at 31:18 in the video](images/image-05103ba4002b873f96c6fd5b.jpg)
+![Screenshot at 31:18 in the video](./images/image-05103ba4002b873f96c6fd5b.jpg)
 
 One of the other benefits of this is that, increasingly, programming GPUs is less about getting the layouts right and more about getting concurrency and synchronization right. So, if you were to write a Hopper kernel that runs at peak performance, you would have to write a synchronization graph, effectively in your code, that kind of looks like the one on the left-hand side. But with CUTLASS,
 
@@ -401,7 +401,7 @@ to reason about than one as a single unit. So just like you would break down dat
 
 ## [32:16](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=1936)
 
-![Screenshot at 32:16 in the video](images/image-313aa9045c914b18f8a3dae5.jpg)
+![Screenshot at 32:16 in the video](./images/image-313aa9045c914b18f8a3dae5.jpg)
 
 So, what are the rules of thumb for writing custom kernels targeting Tensor Cores using CUTLASS? What changes? Again, the name of the game is to localize your changes to the smallest subset that is affected by it. Are you doing kernel fusion? Write a custom kernel schedule and compose with existing collectives and the tile scheduler; you get a lot of the optimizations for free.
 
@@ -417,7 +417,7 @@ And at that point, everything else remains the same, which is your main loops, y
 
 ## [34:07](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2047)
 
-![Screenshot at 34:07 in the video](images/image-58785693c8d572c7962b4150.jpg)
+![Screenshot at 34:07 in the video](./images/image-58785693c8d572c7962b4150.jpg)
 
 So this is the mixed-input GEMM I was talking about, and this is also a feature highlight, where we can do matrix multiplies on Hopper that have separate element types for A and B. And the kernel itself will do the dequantization. So, if you're doing weight quantization kernels, where the activation remains in a higher precision and the weight is quantized into a smaller precision,
 
@@ -425,13 +425,13 @@ These are the kernels that fuse the dequant step into the kernel itself. In CUTL
 
 ## [34:41](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2081)
 
-![Screenshot at 34:41 in the video](images/image-c5f333c750d9224064749158.jpg)
+![Screenshot at 34:41 in the video](./images/image-c5f333c750d9224064749158.jpg)
 
 Similarly, for epilogues, this is one place where we can do epilogue fusions very easily via something we call the epilogue visitor tree, which basically lets you express the fusion operations as a directed acyclic graph of operations on top of the accumulator of the result of the main loop. So let's go
 
 ## [35:02](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2102)
 
-![Screenshot at 35:02 in the video](images/image-7c0a7cc39d0dc5bccf49df8d.jpg)
+![Screenshot at 35:02 in the video](./images/image-7c0a7cc39d0dc5bccf49df8d.jpg)
 
 through an example of what that looks like. Let's say I want to implement this kind of GEMM, where this is the accumulator of the result of my $a \times b$. And I want to scale that by $\alpha$, add a bias to it, and then add $\beta \times c$ to it, and then finally compute a ReLU. Then you can write this DAG of operations as a composed DAG of C++ types. So you can say $\alpha$ is a scalar broadcast of some element.
 
@@ -439,25 +439,25 @@ Then you fetch the accumulator. Then the bias computation is a column-wise broad
 
 ## [35:51](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2151)
 
-![Screenshot at 35:51 in the video](images/image-360a0d1283721d1a9e675e5b.jpg)
+![Screenshot at 35:51 in the video](./images/image-360a0d1283721d1a9e675e5b.jpg)
 
 And this, again, is itself hierarchical, right? So you can compose any tree that you want in a similar fashion. And finally, the ReLU is just a composition of the result of this node over here. And you can write any arbitrary
 
 ## [36:04](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2164)
 
-![Screenshot at 36:04 in the video](images/image-1c8041f88761f79c1eaf1f69.jpg)
+![Screenshot at 36:04 in the video](./images/image-1c8041f88761f79c1eaf1f69.jpg)
 
 epilogue visitor this way.
 
 ## [36:07](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2167)
 
-![Screenshot at 36:07 in the video](images/image-d7637e9a5faa12b7488f124d.jpg)
+![Screenshot at 36:07 in the video](./images/image-d7637e9a5faa12b7488f124d.jpg)
 
 We make this even simpler than it is: you can actually create arbitrary epilogue fusions via the CUTLASS Python interface directly, where you can define your epilogue fusion as just a Python function. So in this case, this is exactly the same fusion as I had before. And what
 
 ## [36:25](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2185)
 
-![Screenshot at 36:25 in the video](images/image-39020bce2dae66c365b2f4a3.jpg)
+![Screenshot at 36:25 in the video](./images/image-39020bce2dae66c365b2f4a3.jpg)
 
 you can do is give your dimensions of the input tensors as torch tensors that are empty, and bind them to the variable names that are used within this function over here in Python. And calling `epilogue.trace` will actually emit the C++ for you. So, say you're scared enough to not even write the epilogue by itself, and the template hierarchy is too cumbersome for you.
 
@@ -465,25 +465,25 @@ The Python interface will actually dump the C++ epilogue visitor tree code for y
 
 ## [37:06](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2226)
 
-![Screenshot at 37:06 in the video](images/image-716d7ad58c7571d1770b9fc9.jpg)
+![Screenshot at 37:06 in the video](./images/image-716d7ad58c7571d1770b9fc9.jpg)
 
 A peek behind the scenes at how the epilogue visitor actually works. Using the domain knowledge that we have about how to make epilogues performant, we actually take your epilogue visitor and those callbacks within the visitor
 
 ## [37:21](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2241)
 
-![Screenshot at 37:21 in the video](images/image-adafcd216440cc418092ba60.jpg)
+![Screenshot at 37:21 in the video](./images/image-adafcd216440cc418092ba60.jpg)
 
 get strategically inserted within the sequence of operations happening within the epilogue, and that's how they get interleaved together. Again, don't focus on the details; this is kind of just a behind-the-scenes look at how this thing works and how it is implemented. But you can always read the code. It's all open source. Want to take it?
 
 ## [37:39](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2259)
 
-![Screenshot at 37:39 in the video](images/image-f7cf007ecf3073bbe1c22cea.jpg)
+![Screenshot at 37:39 in the video](./images/image-f7cf007ecf3073bbe1c22cea.jpg)
 
 Peter, can you speak a little bit about this—like how the Python library and the C++
 
 ## [37:45](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2265)
 
-![Screenshot at 37:45 in the video](images/image-9873a9ea64bbbf4373d1da3c.jpg)
+![Screenshot at 37:45 in the video](./images/image-9873a9ea64bbbf4373d1da3c.jpg)
 
 library basically interact, where and when the compilation happens, and how you basically load the kernel then from PyTorch. Yeah. So `epilogue.trace` is what's emitting the C++ code, and then `epilogue.run` is compiling the kernel as well as running it. And then caching also.
 
@@ -491,7 +491,7 @@ Yes, there is caching implemented as well. So if you run the same kernel again, 
 
 ## [38:17](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2297)
 
-![Screenshot at 38:17 in the video](images/image-31b8b07f940270c757711ab3.jpg)
+![Screenshot at 38:17 in the video](./images/image-31b8b07f940270c757711ab3.jpg)
 
 Okay, so we've gone through this. There's also a CUTLASS Profiler that is handy for people who are trying to figure out what kernel actually performs best. And this is our auto-tuning strategy. We recommend it to everybody. So, CUTLASS, being a template-only header library, allows you to stamp out hundreds, if not hundreds of thousands, of kernels across all architectures.
 
@@ -503,17 +503,17 @@ So there's a lot of fancy features within CUTLASS Profiler. It'll also make sure
 
 ## [39:35](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2375)
 
-![Screenshot at 39:35 in the video](images/image-8c05d8fa97acf9aceacf1fe8.jpg)
+![Screenshot at 39:35 in the video](./images/image-8c05d8fa97acf9aceacf1fe8.jpg)
 
 Okay. With that, that concludes my section of the CUTLASS overview. I will now hand it to Pradeep to cover the Hopper-specific bits as well as do the demo. Thank you very much, Vijay. Thanks. Um. Can folks hear me? Yes, we can hear.
 
 ## [40:03](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2403)
 
-![Screenshot at 40:03 in the video](images/image-89966c208e521f5095d23ba3.jpg)
+![Screenshot at 40:03 in the video](./images/image-89966c208e521f5095d23ba3.jpg)
 
 ## [40:09](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2409)
 
-![Screenshot at 40:09 in the video](images/image-3dcba36add77ea9914b9e17b.jpg)
+![Screenshot at 40:09 in the video](./images/image-3dcba36add77ea9914b9e17b.jpg)
 
 So, starting over from Vijay's presentation, which covered nicely CUTLASS itself as a high-level interface for developer productivity, we are moving on to Hopper-specific details. Though this largely tries to cover Hopper in detail, we also try to give information about other prior architectures like Ampere.
 
@@ -521,7 +521,7 @@ This specific slide set, I'd like to give acknowledgement to Stephen Jones, who 
 
 ## [40:57](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2457)
 
-![Screenshot at 40:57 in the video](images/image-1724f893afd88a993e9434d5.jpg)
+![Screenshot at 40:57 in the video](./images/image-1724f893afd88a993e9434d5.jpg)
 
 So, the GPU programming model itself is quite familiar to most folks in this domain, but I would still like to quickly give a high-level overview. It typically boils down to breaking your computation into a grid of work. Like in this example, you might want to process this flower to do some image processing.
 
@@ -529,7 +529,7 @@ Like increase the contrast, or perform convolution on it using a filter, and so 
 
 ## [41:26](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2486)
 
-![Screenshot at 41:26 in the video](images/image-8a6673a0109d37c9aa28401b.jpg)
+![Screenshot at 41:26 in the video](./images/image-8a6673a0109d37c9aa28401b.jpg)
 
 And then these grids are essentially divided into blocks, which help the computation. So, once this grid of work is divided into equal blocks, these blocks can now be scheduled onto the GPU. The thing that is specific about these blocks is that each block runs as if it's an independent program.
 
@@ -539,7 +539,7 @@ On a massively parallel machine like a GPU, this work can be accelerated across 
 
 ## [42:33](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2553)
 
-![Screenshot at 42:33 in the video](images/image-51c72d135eddeb77fde048ca.jpg)
+![Screenshot at 42:33 in the video](./images/image-51c72d135eddeb77fde048ca.jpg)
 
 new in Hopper? It is that there is a new introduction to this thread hierarchy, which involves a cluster of blocks. As you can see, it is introduced between the grid and the individual thread block that we just saw in the previous slide. Why do we need this block—a block which introduces a new hierarchy—is what we will see later. But there are lots of benefits.
 
@@ -547,7 +547,7 @@ In utilizing the locality of how these blocks are present: as you can see from t
 
 ## [43:19](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2599)
 
-![Screenshot at 43:19 in the video](images/image-1896e3db2c498e70b72a66aa.jpg)
+![Screenshot at 43:19 in the video](./images/image-1896e3db2c498e70b72a66aa.jpg)
 
 As to how this locality is represented, essentially that thread block cluster gets mapped onto a physical entity in the hardware itself that we call a GPC, or GPU processing cluster. To give you a scale of what a GPC is, it is the equivalent of something like a Kepler-level GPU. So this was an entire Kepler GPU, and now this is essentially what a GPU processing cluster is in Hopper.
 
@@ -555,7 +555,7 @@ The benefit of thread block clusters is that they get co-scheduled onto a GPC, w
 
 ## [44:17](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2657)
 
-![Screenshot at 44:17 in the video](images/image-cbd5425906ed087c4fcc4890.jpg)
+![Screenshot at 44:17 in the video](./images/image-cbd5425906ed087c4fcc4890.jpg)
 
 Users are familiar with shared memory, and shared memory is associated with individual streaming multiprocessors. Now that we have introduced a new level in the thread hierarchy wherein they all get co-scheduled, Hopper has also added the feature wherein the individual shared memories can be accessed not just by your SM but by any SM within the same thread block cluster.
 
@@ -563,7 +563,7 @@ This creates what is known as distributed shared memory, wherein data from a dif
 
 ## [45:14](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2714)
 
-![Screenshot at 45:14 in the video](images/image-cab4a526962cdc1d0b984a3a.jpg)
+![Screenshot at 45:14 in the video](./images/image-cab4a526962cdc1d0b984a3a.jpg)
 
 On top of that, Hopper embraces the concept introduced in Volta, wherein threads are threads. Prior to Volta, things were typically scheduled as warps, and then synchronization was additionally introduced to make sure that they behave in that way. But starting with Volta, independent thread scheduling was introduced, which gives each of them their own program counter, and so on.
 
@@ -575,7 +575,7 @@ For them to consume the data that is produced by all the producers. So splitting
 
 ## [47:11](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2831)
 
-![Screenshot at 47:11 in the video](images/image-51e53d773c8aa444e84e588a.jpg)
+![Screenshot at 47:11 in the video](./images/image-51e53d773c8aa444e84e588a.jpg)
 
 So now we see that this concept is also embraced by the CUDA barrier, which is part of the CG group of libraries that is also provided by NVIDIA. One can independently have work that is done, arrived, and then, once the producers have arrived, it will still be non-blocking, wherein they can go on to reduce the amount of latency that is exposed for this thread.
 
@@ -583,7 +583,7 @@ And do independent work, and wait only when it needs to wait. So the arrive-wait
 
 ## [48:14](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2894)
 
-![Screenshot at 48:14 in the video](images/image-b6d9bac7b906c031ec909728.jpg)
+![Screenshot at 48:14 in the video](./images/image-b6d9bac7b906c031ec909728.jpg)
 
 Now, taking it one step further, Hopper introduces the concept of barriers, which also have arrival counts and transaction counts. The reason for having transaction counts in addition to the arrival count is to track memory operations, which are also asynchronous now. The enhancements in hardware essentially allow the hardware instructions to directly update barriers.
 
@@ -591,7 +591,7 @@ With the transaction counts that they have completed, in terms of loading from g
 
 ## [49:08](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=2948)
 
-![Screenshot at 49:08 in the video](images/image-8f296ae670ab9cc3344c08e0.jpg)
+![Screenshot at 49:08 in the video](./images/image-8f296ae670ab9cc3344c08e0.jpg)
 
 Another major addition to Hopper itself is the Tensor Memory Accelerator, or TMA, unit. Prior to this, there was the memcpy async operation, which used an operation known as LDGSTS, which essentially loads data from global memory to shared memory directly without going through registers. Prior to the Ampere architecture, one had to essentially move data into registers.
 
@@ -605,7 +605,7 @@ One benefit of it is that it also allows you; because it is an asynchronous inst
 
 ## [51:22](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3082)
 
-![Screenshot at 51:22 in the video](images/image-03756591a002ebefc8c9978f.jpg)
+![Screenshot at 51:22 in the video](./images/image-03756591a002ebefc8c9978f.jpg)
 
 Now, going into the Hopper Tensor Cores themselves. They have gotten tremendously faster than the FP32 CUDA cores. So, for a typical 16-bit floating-point tensor core, it is as fast as $16\times$ or $32\times$ if you use sparsity, compared to regular FP32 CUDA cores. And with Hopper, there is also the new introduction of FP8 floating-point tensor cores, which are of two formats.
 
@@ -617,7 +617,7 @@ one to essentially try to target tensor cores, to essentially maximize the usage
 
 ## [52:50](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3170)
 
-![Screenshot at 52:50 in the video](images/image-601236a99d453076b954ea0b.jpg)
+![Screenshot at 52:50 in the video](./images/image-601236a99d453076b954ea0b.jpg)
 
 Here we just look at the typical shapes of instructions that are used for the MMA operation itself, and we see that across different generations of GPUs. For Hopper-style GPUs, the performance for the FP16 data type is as high as 1 petaflop. And so.
 
@@ -625,7 +625,7 @@ This is about $3\times$ faster than Ampere, and you can just draw a trend line a
 
 ## [53:42](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3222)
 
-![Screenshot at 53:42 in the video](images/image-6354ffc1f55decdcb11e49db.jpg)
+![Screenshot at 53:42 in the video](./images/image-6354ffc1f55decdcb11e49db.jpg)
 
 This slide was covered by VJ, so I will just go over this fast. It is just explaining what the matrix operations that the tensor cores accomplish are. It is essentially either a matrix multiply-add, or if it is single-bit data, it tries to do an XOR popc. The main specifics related to Hopper are that the tensor core instruction itself is warpgroup-wide.
 
@@ -637,7 +637,7 @@ versus in Hopper, they come from shared memory, with A optionally loadable from 
 
 ## [55:13](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3313)
 
-![Screenshot at 55:13 in the video](images/image-be4ba1e3fb0bc9f828755031.jpg)
+![Screenshot at 55:13 in the video](./images/image-be4ba1e3fb0bc9f828755031.jpg)
 
 So this is just an example of how things look for Ampere, and this is showing specifically MMA traits for one of the Ampere-style instructions, to give a sense of how things have evolved between Ampere and Hopper. In Ampere, essentially, this is one example of an Ampere MMA instruction, which is $16\times8\times8$. You can see that the A operand is $16\times8$, and the B operand is $8\times8$.
 
@@ -649,7 +649,7 @@ Now, in terms of how the tensor cores themselves have evolved from Ampere, they 
 
 ## [56:46](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3406)
 
-![Screenshot at 56:46 in the video](images/image-d4ade4ea8f7c9c25e1d07652.jpg)
+![Screenshot at 56:46 in the video](./images/image-d4ade4ea8f7c9c25e1d07652.jpg)
 
 And now in Hopper, the MMA shape is 64. This is again an example shape, but there are many, many different types of MMA instructions. It is an example which shows $64\times16$ for A and $16\times16$ for the B operand, which is collectively held by 128 threads. Again, the A and B layouts—they have a layout. But in this specific example, which says SS.
 
@@ -657,7 +657,7 @@ Both operands are coming from shared memory. If you get one operand from registe
 
 ## [57:32](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3452)
 
-![Screenshot at 57:32 in the video](images/image-da03f01a931eb1538e2af7f5.jpg)
+![Screenshot at 57:32 in the video](./images/image-da03f01a931eb1538e2af7f5.jpg)
 
 In terms of actually accessing the PTX instruction, I am just going to leave this here for reference. It shows that it is pretty complicated, and this is essentially where CUTLASS and CuTe come in. The takeaway from this slide is: it is complicated to program Hopper tensor cores directly using inline PTX, and one can use a CuTe atom to get the same result. One question.
 
@@ -665,7 +665,7 @@ Rudy is also asking—OK, PTX. I guess this is only for the super-special case, 
 
 ## [58:15](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3495)
 
-![Screenshot at 58:15 in the video](images/image-831f2104caf7a64612fe8ecc.jpg)
+![Screenshot at 58:15 in the video](./images/image-831f2104caf7a64612fe8ecc.jpg)
 
 So, it is also not necessary that users or developers normally deal at this level. You can do it, of course, but it is for special cases. Yeah. Exactly, the builder essentially figures out all of this for you. So, given a tile shape and given what kind of kernel you want, the builder has the information necessary to pick exactly the atom needed.
 
@@ -673,13 +673,13 @@ What tiles to use? How to tile them across shared memory? Because it has all the
 
 ## [58:58](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3538)
 
-![Screenshot at 58:58 in the video](images/image-9baa64da2f968739a9565ea1.jpg)
+![Screenshot at 58:58 in the video](./images/image-9baa64da2f968739a9565ea1.jpg)
 
 With that, we can essentially move on to the anatomy of a high-performance GEMM on Hopper.
 
 ## [59:08](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3548)
 
-![Screenshot at 59:08 in the video](images/image-07cd271bbbffef2d8b2fda5b.jpg)
+![Screenshot at 59:08 in the video](./images/image-07cd271bbbffef2d8b2fda5b.jpg)
 
 Typically, when talking about performance programming of GPUs, these are common things that you care about. One of the most important things, as you can see, is how you handle memory. This involves making sure you're not bottlenecked by memory and also making sure you are managing memory latency, so making sure data is in the right format in both cases.
 
@@ -689,7 +689,7 @@ If asynchrony is not handled properly, it can again lead to large stalls in the 
 
 ## [1:00:22](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3622)
 
-![Screenshot at 1:00:22 in the video](images/image-656175fb83b98a103340873d.jpg)
+![Screenshot at 1:00:22 in the video](./images/image-656175fb83b98a103340873d.jpg)
 
 To give a sense of how many optimizations are needed, we've tried to outline as many as we could recall and put them together in a slide. But we've tried to categorize them into three levels. These are like 101, 201, and 501. In terms of 101-level optimizations for Hopper, the recommendation is to use TMA.
 
@@ -715,13 +715,13 @@ TMA knows about swizzling, and you can prescribe to TMA to write it in some spec
 
 ## [1:04:45](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3885)
 
-![Screenshot at 1:04:45 in the video](images/image-d81da7fa4da3e2920db0b230.jpg)
+![Screenshot at 1:04:45 in the video](./images/image-d81da7fa4da3e2920db0b230.jpg)
 
 Putting it together, Vijay, we have one question. Maybe if you could—somebody asks if you could give an example of good pipelining
 
 ## [1:04:54](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3894)
 
-![Screenshot at 1:04:54 in the video](images/image-752a3d5c7a6817d934e261ee.jpg)
+![Screenshot at 1:04:54 in the video](./images/image-752a3d5c7a6817d934e261ee.jpg)
 
 versus bad pipelining in software. Sure. In terms of good pipelining, you would want to make sure that your pipeline is deep enough. If you know that your specific way of scheduling and your algorithms are not going to have enough L2 hits, you need a much deeper pipeline because you're trying to cover a much larger latency.
 
@@ -731,7 +731,7 @@ Good or bad cannot be a general prescription. It depends on the problem, but the
 
 ## [1:06:01](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=3961)
 
-![Screenshot at 1:06:01 in the video](images/image-aacc92b2787e56a3bd8df676.jpg)
+![Screenshot at 1:06:01 in the video](./images/image-aacc92b2787e56a3bd8df676.jpg)
 
 This just puts it all together in a picture. Essentially, data moves from global memory to shared memory, then optionally to register files, and then to tensor cores; once the data is computed, the MMAs are computed. This is where the epilogue operation happens, which was another question in one of the...
 
@@ -741,7 +741,7 @@ Registers and so on. Essentially, what happens is that data can move directly fr
 
 ## [1:07:00](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4020)
 
-![Screenshot at 1:07:00 in the video](images/image-b5400e590fff08bb318fc181.jpg)
+![Screenshot at 1:07:00 in the video](./images/image-b5400e590fff08bb318fc181.jpg)
 
 Now, putting everything together, I've just drawn a logical view of how things are orchestrated, to make it easier before we dive into the actual code. One can imagine a streaming multiprocessor essentially having some warps dedicated to doing MMA operations; DMA here is just loading data from global memory. We have tensor cores and shared memory. Shared memory has...
 
@@ -767,103 +767,103 @@ by reducing the surface area in terms of manageable pieces and reducing them int
 
 ## [1:11:42](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4302)
 
-![Screenshot at 1:11:42 in the video](images/image-b9984edf79a580e88667fb0f.jpg)
+![Screenshot at 1:11:42 in the video](./images/image-b9984edf79a580e88667fb0f.jpg)
 
 We can now proceed to the next section, which is essentially walking through a Hopper tensor core in the underlines.
 
 ## [1:11:53](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4313)
 
-![Screenshot at 1:11:53 in the video](images/image-d32913dc9c725848fb14ce04.jpg)
+![Screenshot at 1:11:53 in the video](./images/image-d32913dc9c725848fb14ce04.jpg)
 
 The reference for it can be found as a pull request. It'll be merged soon. I'll stop and reshare here.
 
 ## [1:12:06](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4326)
 
-![Screenshot at 1:12:06 in the video](images/image-2c2cff918b7a7fb86174c1de.jpg)
+![Screenshot at 1:12:06 in the video](./images/image-2c2cff918b7a7fb86174c1de.jpg)
 
 I hope this is still visible.
 
 ## [1:12:19](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4339)
 
-![Screenshot at 1:12:19 in the video](images/image-5188cb6b7ee80dd7771e1687.jpg)
+![Screenshot at 1:12:19 in the video](./images/image-5188cb6b7ee80dd7771e1687.jpg)
 
 Yes, it's visible. This is essentially showing a Hopper SM90 WGMMA example. It's available in the CUTLASS repository right now for reference for anyone interested in going through it.
 
 ## [1:12:37](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4357)
 
-![Screenshot at 1:12:37 in the video](images/image-aaff305ed49bae15f5afa937.jpg)
+![Screenshot at 1:12:37 in the video](./images/image-aaff305ed49bae15f5afa937.jpg)
 
 I can probably paste a link in the chat as well for those interested.
 
 ## [1:12:44](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4364)
 
-![Screenshot at 1:12:44 in the video](images/image-016d68bd98ab516e398c03e9.jpg)
+![Screenshot at 1:12:44 in the video](./images/image-016d68bd98ab516e398c03e9.jpg)
 
 So the idea is to essentially put it all together. We've spoken about a lot of concepts over the last one hour or so. This is trying to put it together in a single kernel, which is in a pretty concise manner. For simplicity, we can start directly with the host code, and then we can come to the device code.
 
 ## [1:13:09](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4389)
 
-![Screenshot at 1:13:09 in the video](images/image-f57f9e02bde503715121f6f2.jpg)
+![Screenshot at 1:13:09 in the video](./images/image-f57f9e02bde503715121f6f2.jpg)
 
 We just look at the whole setup for a typical GEMM operation. Say a GEMM T N T N essentially stands for transposes and non-transposes. That means the $A$ operand is T, which is column-major. And the $B$ operand—oh, T is row-major, and the $B$ operand is N, which is column-major. So.
 
 ## [1:13:33](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4413)
 
-![Screenshot at 1:13:33 in the video](images/image-6d5cf08caaad0ac504e3ad94.jpg)
+![Screenshot at 1:13:33 in the video](./images/image-6d5cf08caaad0ac504e3ad94.jpg)
 
 The problem essentially for GEMM is defined in terms of three important numbers: $m$, $n$, and $k$. So $A$ is an $m \times k$ matrix, $B$ is an $n \times k$ matrix, and the problem essentially decomposes into an $m \times n$ result.
 
 ## [1:13:48](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4428)
 
-![Screenshot at 1:13:48 in the video](images/image-0f98fe645239a51eb5ac42f5.jpg)
+![Screenshot at 1:13:48 in the video](./images/image-0f98fe645239a51eb5ac42f5.jpg)
 
 Now this is where we'll start employing all the principles of CuTe and CUTLASS, essentially, to build a GEMM. Now, because we don't have access to builders, we will be forcibly making some decisions, which may seem random, but this is where the builders essentially help you in making sure that this is a correct choice. But we will still discuss some of them.
 
 ## [1:14:11](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4451)
 
-![Screenshot at 1:14:11 in the video](images/image-570e954766cc1d91a854837d.jpg)
+![Screenshot at 1:14:11 in the video](./images/image-570e954766cc1d91a854837d.jpg)
 
 So first, we essentially define the $A$, $B$, and $C$ matrices in terms of shapes and strides. So we define the stride of
 
 ## [1:14:22](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4462)
 
-![Screenshot at 1:14:22 in the video](images/image-02eedc890bd6fa3a94459b87.jpg)
+![Screenshot at 1:14:22 in the video](./images/image-02eedc890bd6fa3a94459b87.jpg)
 
 $A$ as... As an input, but essentially it comes from the fact that you have the tensors themselves have
 
 ## [1:14:32](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4472)
 
-![Screenshot at 1:14:32 in the video](images/image-9a2588016ec895f4459543b3.jpg)
+![Screenshot at 1:14:32 in the video](./images/image-9a2588016ec895f4459543b3.jpg)
 
 allocations of memory, and it has a shape which is 2D. And the contiguous dimension width is essentially your leading dimension width. So we can see that.
 
 ## [1:14:45](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4485)
 
-![Screenshot at 1:14:45 in the video](images/image-efa5b5c1428a193a8878ea89.jpg)
+![Screenshot at 1:14:45 in the video](./images/image-efa5b5c1428a193a8878ea89.jpg)
 
 We employ the Thrust library to simplify the memory allocations and so on, so we have three tensors $A$, $B$, and $C$.
 
 ## [1:14:56](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4496)
 
-![Screenshot at 1:14:56 in the video](images/image-153af6a7ba32124e23414cc8.jpg)
+![Screenshot at 1:14:56 in the video](./images/image-153af6a7ba32124e23414cc8.jpg)
 
 Which are $M \times K$, $N \times K$, and $M \times N$. And once the allocations themselves are done, we move on to the CuTe portion.
 
 ## [1:15:10](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4510)
 
-![Screenshot at 1:15:10 in the video](images/image-f467a3e901dae3e41a4d16a1.jpg)
+![Screenshot at 1:15:10 in the video](./images/image-f467a3e901dae3e41a4d16a1.jpg)
 
 This is where we define the shapes and strides of the inputs.
 
 ## [1:15:15](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4515)
 
-![Screenshot at 1:15:15 in the video](images/image-b2d356051c3c2d0735f8b1f4.jpg)
+![Screenshot at 1:15:15 in the video](./images/image-b2d356051c3c2d0735f8b1f4.jpg)
 
 Once we have the problem defined in terms of shapes and strides, we go on to define the tile shape. This is what a single thread block is going to compute on. But the problem with a single thread block is that it does not make use of thread block clusters and so on. So we will see later on, maybe, how to expand this into making it compatible with thread block clusters.
 
 ## [1:15:44](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4544)
 
-![Screenshot at 1:15:44 in the video](images/image-afaac061abbb4c5be0a09296.jpg)
+![Screenshot at 1:15:44 in the video](./images/image-afaac061abbb4c5be0a09296.jpg)
 
 But the idea is that first you pick a thread block size. This is typically, again, about what values to choose here. I would recommend looking at either the CUTLASS profiler or the CUTLASS unit test. They give you good, sensible values on what to use here. Again, if you give auto to the builder, the builder will usually pick a size for you, which is valid as well.
 
@@ -871,7 +871,7 @@ Once a thread block shape is chosen, which is in terms of block $M$, block $N$, 
 
 ## [1:16:11](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4571)
 
-![Screenshot at 1:16:11 in the video](images/image-ef06e7c9eb73b96c2f1efba2.jpg)
+![Screenshot at 1:16:11 in the video](./images/image-ef06e7c9eb73b96c2f1efba2.jpg)
 
 We also define a pipeline attribute here, which tells you how deep your software-defined pipeline is. Now, using all of these parameters, we can start constructing the shared memory itself. To construct the shared memory, we need to realize that we need to load tiles of $A$ and $B$ tensors. So essentially, you have two layouts.
 
@@ -885,7 +885,7 @@ You construct the layout of shared memory using just one line. Essentially, this
 
 ## [1:18:07](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4687)
 
-![Screenshot at 1:18:07 in the video](images/image-8d3811abbf5c034365ec86cd.jpg)
+![Screenshot at 1:18:07 in the video](./images/image-8d3811abbf5c034365ec86cd.jpg)
 
 Sure. Now we are ready to construct the MMA operation itself. Now we tiled a data layout over the shape. Now, similarly, we need to tile an MMA as well. To create the TiledMMA, we first need to choose which MMA instruction itself to use. Now, this again is sort of described depending on your tile shape and so on, but the idea is that you pick an MMA atom, which defines the smallest
 
@@ -895,7 +895,7 @@ Can we see that? That's why the GMMA itself is attributed to $K$-major in the in
 
 ## [1:19:28](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4768)
 
-![Screenshot at 1:19:28 in the video](images/image-ab62674b9d8c116f215ece6f.jpg)
+![Screenshot at 1:19:28 in the video](./images/image-ab62674b9d8c116f215ece6f.jpg)
 
 Again, a simplified API which takes the pointer to a shape and, essentially, the leading dimensions, which are used for constructing the strides. So once we have constructed the A tensor, we have constructed the tiled MMA tensor. What's necessary? What's essentially the last step is to figure out how to copy this data. So there are many ways to copy the data.
 
@@ -907,31 +907,31 @@ How many TMA? I mean, CuTe also needs to figure out how many TMA instructions to
 
 ## [1:21:03](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4863)
 
-![Screenshot at 1:21:03 in the video](images/image-863cffbe154dc5cadee77f3c.jpg)
+![Screenshot at 1:21:03 in the video](./images/image-863cffbe154dc5cadee77f3c.jpg)
 
 makes it super good for developer productivity. Wherein you create an MMA atom, you create a TMA atom, you create your tensors. And that's it. You're now ready to launch your kernel. There's nothing else needed from
 
 ## [1:21:14](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4874)
 
-![Screenshot at 1:21:14 in the video](images/image-69bb480a2abbeb695760f380.jpg)
+![Screenshot at 1:21:14 in the video](./images/image-69bb480a2abbeb695760f380.jpg)
 
 the setup point of view, other than the basic recipes for a kernel itself.
 
 ## [1:21:20](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4880)
 
-![Screenshot at 1:21:20 in the video](images/image-fa4062e4d9fa9bb8654f871e.jpg)
+![Screenshot at 1:21:20 in the video](./images/image-fa4062e4d9fa9bb8654f871e.jpg)
 
 To launch a kernel, again, we use a new launch mechanism, which is introduced in Hopper. But...
 
 ## [1:21:29](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4889)
 
-![Screenshot at 1:21:29 in the video](images/image-547f82fb8ca596b828c34075.jpg)
+![Screenshot at 1:21:29 in the video](./images/image-547f82fb8ca596b828c34075.jpg)
 
 CUTLASS has an abstraction for it, which makes it super simple. Again, to launch clusters, to launch kernels which can support thread block clusters. And so, once the kernel itself is launched, we can go to the device code to continue on from there. In the device code section, we can see that
 
 ## [1:21:52](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4912)
 
-![Screenshot at 1:21:52 in the video](images/image-cb512823bddc4c651d6eff33.jpg)
+![Screenshot at 1:21:52 in the video](./images/image-cb512823bddc4c651d6eff33.jpg)
 
 It takes in the inputs of the A pointer, B pointer, and C pointer, of course. Now it takes in a grid constant. Grid constant is nothing but just coming from __grid_constant__, and it's a kernel-wide constant. And so it takes in these constants, which are the TMA copy atoms we just created. It takes in the tiled MMA, which we just created. Alpha and beta are used in the epilogue for scaling the outputs, essentially.
 
@@ -939,37 +939,37 @@ So you can see that it's a fairly simple thing that
 
 ## [1:22:20](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4940)
 
-![Screenshot at 1:22:20 in the video](images/image-5300b827639550a233cec107.jpg)
+![Screenshot at 1:22:20 in the video](./images/image-5300b827639550a233cec107.jpg)
 
 it's taking in, in terms of what the parameters are for the device-side kernel. These are just a bunch of static asserts to make sure that everything matches up to
 
 ## [1:22:30](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4950)
 
-![Screenshot at 1:22:30 in the video](images/image-6997579d20d39244c12292dd.jpg)
+![Screenshot at 1:22:30 in the video](./images/image-6997579d20d39244c12292dd.jpg)
 
 expectation, and CuTe can. You will not get further static asserts later from CuTe. But again, if there's
 
 ## [1:22:37](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4957)
 
-![Screenshot at 1:22:37 in the video](images/image-57cdf900bbce3ce393d09412.jpg)
+![Screenshot at 1:22:37 in the video](./images/image-57cdf900bbce3ce393d09412.jpg)
 
 something wrong, CuTe will usually throw a static assert in one of its usages. So now that we are ready to run the kernel, we
 
 ## [1:22:49](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4969)
 
-![Screenshot at 1:22:49 in the video](images/image-9511d64232d46cee5f2bc3f3.jpg)
+![Screenshot at 1:22:49 in the video](./images/image-9511d64232d46cee5f2bc3f3.jpg)
 
 essentially try to create what is known as a partitioning of tensors, to make sure that
 
 ## [1:22:56](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4976)
 
-![Screenshot at 1:22:56 in the video](images/image-415c61fefb0770eff4a12a71.jpg)
+![Screenshot at 1:22:56 in the video](./images/image-415c61fefb0770eff4a12a71.jpg)
 
 we can specifically deal with data only for this thread block or thread block cluster. Because that's how the GPU operates, right? GPUs operate on thread block clusters. You need to operate on a block of data. And to create that block of data, you need to tile and then partition your data. So now let's go ahead and see how that's done.
 
 ## [1:23:17](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=4997)
 
-![Screenshot at 1:23:17 in the video](images/image-dc17ecb6a3ff835f29046143.jpg)
+![Screenshot at 1:23:17 in the video](./images/image-dc17ecb6a3ff835f29046143.jpg)
 
 We have a generic API, which is for getting what is known as a TMA tensor. Typically, in Ampere or other prior architectures, there's no concept of TMA, and so essentially you could just directly slice your tensors to make sure you can partition and slice it. But in Hopper, you would essentially get what is known as a TMA tensor, so that you can partition it and slice it.
 
@@ -977,7 +977,7 @@ Make sure that that information gets passed along in a way that TMA expects, so 
 
 ## [1:24:10](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5050)
 
-![Screenshot at 1:24:10 in the video](images/image-90041f49d13fa49566589a1c.jpg)
+![Screenshot at 1:24:10 in the video](./images/image-90041f49d13fa49566589a1c.jpg)
 
 So now we have the tensors. Now it's time to tile them. So we know that we tile our global memory tensors using our CTA tile. But then we specifically want only the tile that I am responsible for, and that's usually defined by your blockIdx coordinates. And this is how CUDA essentially makes use of the thread hierarchy mechanism to divide it into blocks, giving them an ID each. So as
 
@@ -985,19 +985,19 @@ I am operating only on a specific block. I tile the data and then get only my lo
 
 ## [1:24:56](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5096)
 
-![Screenshot at 1:24:56 in the video](images/image-b3d7726b9407c67aec8e8eae.jpg)
+![Screenshot at 1:24:56 in the video](./images/image-b3d7726b9407c67aec8e8eae.jpg)
 
 My block of data. And essentially, now, this is just creating the shared memory tensor itself, getting the pointer to it from dynamic shared memory that was
 
 ## [1:25:07](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5107)
 
-![Screenshot at 1:25:07 in the video](images/image-77071a0cfa1e96a37425b2e1.jpg)
+![Screenshot at 1:25:07 in the video](./images/image-77071a0cfa1e96a37425b2e1.jpg)
 
 Allocated, and then making sure that it is a tensor itself. Now, once you have created the local tile.
 
 ## [1:25:16](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5116)
 
-![Screenshot at 1:25:16 in the video](images/image-26d154a05361f5c72cca71e4.jpg)
+![Screenshot at 1:25:16 in the video](./images/image-26d154a05361f5c72cca71e4.jpg)
 
 It's time to partition the data so that you can essentially perform the copy. To do the partitioning of the data, TMA provides this API, which is essentially TMA partition. It takes in the TMA atom that was created. There are also a few numbers here you will see, but these are related to multicasts and the CTA IDs themselves.
 
@@ -1005,7 +1005,7 @@ So that's why it's hard coded to one and zero, because in this case it's just a 
 
 ## [1:25:50](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5150)
 
-![Screenshot at 1:25:50 in the video](images/image-7cb3864b6dd6ebb1d7948e7b.jpg)
+![Screenshot at 1:25:50 in the video](./images/image-7cb3864b6dd6ebb1d7948e7b.jpg)
 
 And what we are telling the TMA partitioner is: help me partition the shared memory tensor and the global memory tensor, so that I can effectively copy the partitions of data from global memory to shared memory. And these groupings of modes essentially make sure that you group them so that...
 
@@ -1013,19 +1013,19 @@ The TMA itself can handle specifically the parts that it cares about for a parti
 
 ## [1:26:42](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5202)
 
-![Screenshot at 1:26:42 in the video](images/image-87cfee48941121c8359afe48.jpg)
+![Screenshot at 1:26:42 in the video](./images/image-87cfee48941121c8359afe48.jpg)
 
 Wherein you have the same idea of partitioning the data for source and destination, to get a source tensor and a destination tensor, which is partitioned, so that you can perform the copy.
 
 ## [1:26:55](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5215)
 
-![Screenshot at 1:26:55 in the video](images/image-20fac79a478eedfe75aedd3a.jpg)
+![Screenshot at 1:26:55 in the video](./images/image-20fac79a478eedfe75aedd3a.jpg)
 
 So this is essentially partitioning the data to make sure the copy itself can be done.
 
 ## [1:27:00](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5220)
 
-![Screenshot at 1:27:00 in the video](images/image-8eddcc1f41cfaf030bf3020b.jpg)
+![Screenshot at 1:27:00 in the video](./images/image-8eddcc1f41cfaf030bf3020b.jpg)
 
 Now we do a similar thing for the B tensor, and we compute the transaction bytes that are necessary. Now, to compute the transaction bytes, we essentially need to know the size of each stage. You can get that from knowing the size of each stage, which is the same. You can get that from the partition information; that is the first mode of the partition information.
 
@@ -1033,31 +1033,31 @@ It will contain that. The partition information also contains it for all stages,
 
 ## [1:27:36](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5256)
 
-![Screenshot at 1:27:36 in the video](images/image-797892078dd6cdc2c89c503a.jpg)
+![Screenshot at 1:27:36 in the video](./images/image-797892078dd6cdc2c89c503a.jpg)
 
 Now we have created the tensors. We've tiled it. And then after tiling it, we partitioned it to make sure it is distributed in terms of the number of TMAs that need to be done. If a particular tile needs four TMA instructions, the partitioner knows how to partition that into four instructions, what offsets to use for each, and so on and so forth.
 
 ## [1:27:57](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5277)
 
-![Screenshot at 1:27:57 in the video](images/image-0642275f21fa07d766de5383.jpg)
+![Screenshot at 1:27:57 in the video](./images/image-0642275f21fa07d766de5383.jpg)
 
 So now we are actually most of the way done in terms of getting things set up.
 
 ## [1:28:03](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5283)
 
-![Screenshot at 1:28:03 in the video](images/image-dd4e557b83bbfa20d70c6316.jpg)
+![Screenshot at 1:28:03 in the video](./images/image-dd4e557b83bbfa20d70c6316.jpg)
 
 The last thing that needs to be set up is the barriers that we spoke about. We set things up for the producers, but we have yet to set up
 
 ## [1:28:14](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5294)
 
-![Screenshot at 1:28:14 in the video](images/image-ddc7844f7a6af00f95453b4a.jpg)
+![Screenshot at 1:28:14 in the video](./images/image-ddc7844f7a6af00f95453b4a.jpg)
 
 the barriers themselves, and the barriers are again stored in shared memory on Hopper. The same CUDA barriers that are based on Ampere style are also shared memory based. And so,
 
 ## [1:28:28](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5308)
 
-![Screenshot at 1:28:28 in the video](images/image-6a0fee4deac66ea647809d7f.jpg)
+![Screenshot at 1:28:28 in the video](./images/image-6a0fee4deac66ea647809d7f.jpg)
 
 essentially, you need to initialize the barriers again using some APIs. Now, CUTLASS provides abstractions for all of this, so that this can be neatly encapsulated in a single line of code. All of this would probably be creating just one abstraction for a pipeline class, and then you just do a pipeline init. But the idea here is not to abstract out all the details, but to provide
 
@@ -1065,25 +1065,25 @@ information on what's going on, and to provide a minimal example, cutting throug
 
 ## [1:29:02](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5342)
 
-![Screenshot at 1:29:02 in the video](images/image-1ce8362d4d319c61ae4707c8.jpg)
+![Screenshot at 1:29:02 in the video](./images/image-1ce8362d4d319c61ae4707c8.jpg)
 
 Essentially, we have the transaction barriers, which count both transaction and arrival counts. The arrival count is just saying how many threads have arrived. And we have the other one, which is just a cluster barrier, which just counts the arrival count. We made this separation in CUTLASS so that we specifically make sure we're not misusing the barriers in some way.
 
 ## [1:29:24](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5364)
 
-![Screenshot at 1:29:24 in the video](images/image-a95e088b94b56c4fe99306f7.jpg)
+![Screenshot at 1:29:24 in the video](./images/image-a95e088b94b56c4fe99306f7.jpg)
 
 So we have a number of pipeline stages that we spoke about, the software pipeline. We initialize as many barriers as there are pipeline stages, so that each pipeline stage is tracked individually for when it is produced, when it is consumed, and so on. So once
 
 ## [1:29:42](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5382)
 
-![Screenshot at 1:29:42 in the video](images/image-f4c2a559cc26e78305db62e1.jpg)
+![Screenshot at 1:29:42 in the video](./images/image-f4c2a559cc26e78305db62e1.jpg)
 
 we initialize the pipelines themselves. Because this is cluster-wide visible shared memory, we do a cluster-wide sync to make sure that all CTAs, all the thread blocks in the cluster, are now ready to go, because if data is going to be multicast from one shared memory to another shared memory, its barrier needs to be initialized, and so on.
 
 ## [1:30:07](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5407)
 
-![Screenshot at 1:30:07 in the video](images/image-df2cd96fb78ba054e8561012.jpg)
+![Screenshot at 1:30:07 in the video](./images/image-df2cd96fb78ba054e8561012.jpg)
 
 So we move on to the stage where we are now ready to copy—finally. And so, to do the copy itself, you can see that there is absolutely zero address arithmetic. There's no thread data partitioning done manually. There is no layout manipulation done manually, or anything like that. It's vastly simplified by the fact that we are using CuTe APIs here.
 
@@ -1091,7 +1091,7 @@ We've already tiled it. We've already partitioned it. We also now have the barri
 
 ## [1:30:44](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5444)
 
-![Screenshot at 1:30:44 in the video](images/image-9d79c70925abac8d68a0e67f.jpg)
+![Screenshot at 1:30:44 in the video](./images/image-9d79c70925abac8d68a0e67f.jpg)
 
 You know that you are dealing with TMA, and so you need to pass it a TMA barrier so that it can update that barrier. Now, as to where it's copying from, it's copying from the partition data. You are loading a particular tile of data from global memory into a particular stage in shared memory. That's essentially what this API is doing in terms of copying data from global to shared. Once data is copied.
 
@@ -1099,25 +1099,25 @@ Now we are ready to do the MMA itself.
 
 ## [1:31:17](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5477)
 
-![Screenshot at 1:31:17 in the video](images/image-3c8f090c21bd8333c389fb90.jpg)
+![Screenshot at 1:31:17 in the video](./images/image-3c8f090c21bd8333c389fb90.jpg)
 
 To keep track of these barriers, we also create what is known as a pipeline state.
 
 ## [1:31:24](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5484)
 
-![Screenshot at 1:31:24 in the video](images/image-69c60e01d63de56aaabea5af.jpg)
+![Screenshot at 1:31:24 in the video](./images/image-69c60e01d63de56aaabea5af.jpg)
 
 The pipeline state helps manipulate these barriers because it is a circular buffer. You want to make sure that you do not overflow the buffer or use illegal indices.
 
 ## [1:31:34](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5494)
 
-![Screenshot at 1:31:34 in the video](images/image-9aa2d1c4e5f294a112f8a55f.jpg)
+![Screenshot at 1:31:34 in the video](./images/image-9aa2d1c4e5f294a112f8a55f.jpg)
 
 So now, going to the MMA portion of things: we've copied the data now, or rather, we've issued the copies.
 
 ## [1:31:43](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5503)
 
-![Screenshot at 1:31:43 in the video](images/image-e2e4d126e8a68f6038208ef8.jpg)
+![Screenshot at 1:31:43 in the video](./images/image-e2e4d126e8a68f6038208ef8.jpg)
 
 Now, to consume that data, again, we need to do what is known as partitioning of the data, from the perspective of what A and B are needed for doing the MMA itself. Once data comes into shared memory in Ampere, we saw that it gets loaded into registers and so on. In Hopper, it can be loaded directly from shared memory.
 
@@ -1131,7 +1131,7 @@ But what these APIs do in Hopper is essentially create what is known as a descri
 
 ## [1:33:42](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5622)
 
-![Screenshot at 1:33:42 in the video](images/image-abe1b8254292754b26023611.jpg)
+![Screenshot at 1:33:42 in the video](./images/image-abe1b8254292754b26023611.jpg)
 
 to prescribe to the MMA how the data is partitioned in shared memory, and how to load it from shared memory effectively to do the MMA. So we partition based on the A and B tensors to create this tCrA and tCrB, which is essentially saying that we've partitioned it. Looking at the C tensor, the goal is to figure out how this data will be
 
@@ -1139,25 +1139,25 @@ loaded, if it were loaded into rA or registers. But the idea here is to essentia
 
 ## [1:34:16](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5656)
 
-![Screenshot at 1:34:16 in the video](images/image-bceabd1e53184c96ade552b0.jpg)
+![Screenshot at 1:34:16 in the video](./images/image-bceabd1e53184c96ade552b0.jpg)
 
 itself.
 
 ## [1:34:19](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5659)
 
-![Screenshot at 1:34:19 in the video](images/image-a1b5c8be74b716eaad9af50d.jpg)
+![Screenshot at 1:34:19 in the video](./images/image-a1b5c8be74b716eaad9af50d.jpg)
 
 Pradeep, can you maybe do a little bit higher abstraction from now on, because we're running a little out of time? We are almost done with the kernel itself, because there is only one thing left here: MMA.
 
 ## [1:34:36](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5676)
 
-![Screenshot at 1:34:36 in the video](images/image-7bf05dbfb82fdd148de0a5f8.jpg)
+![Screenshot at 1:34:36 in the video](./images/image-7bf05dbfb82fdd148de0a5f8.jpg)
 
 Once we've created all the partitions, we are ready to consume the data. In terms of consuming the data itself:
 
 ## [1:34:43](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5683)
 
-![Screenshot at 1:34:43 in the video](images/image-5def39053d15fd9ea804f8e9.jpg)
+![Screenshot at 1:34:43 in the video](./images/image-5def39053d15fd9ea804f8e9.jpg)
 
 We need to wait for a barrier. Once we wait on the barrier, we go ahead and do these three lines of code, which essentially operate the entire tensor construction. We make sure that we have a warpgroup fence, which is abstracted using warpgroup arrive. We do the gemm operation, which takes in the tiled MMA, which takes in the partition tensors for a particular stage. And we also tell it: this is the
 
@@ -1165,31 +1165,31 @@ result that you need to write data to, and you can reload it as well to accumula
 
 ## [1:35:16](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5716)
 
-![Screenshot at 1:35:16 in the video](images/image-a0723186696cb35914de44ed.jpg)
+![Screenshot at 1:35:16 in the video](./images/image-a0723186696cb35914de44ed.jpg)
 
 So once we've done that, we have finished consuming the data. Now we need to wait on these MMAs to complete, which is done using this MMA warpgroup wait. Because MMAs are asynchronous, they need to be explicitly waited upon before we clear or release the barriers themselves. Once the barriers are released, we can
 
 ## [1:35:39](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5739)
 
-![Screenshot at 1:35:39 in the video](images/image-0d0f467ae26537e22b9ccf09.jpg)
+![Screenshot at 1:35:39 in the video](./images/image-0d0f467ae26537e22b9ccf09.jpg)
 
 go on and produce more data for it.
 
 ## [1:35:42](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5742)
 
-![Screenshot at 1:35:42 in the video](images/image-cabd852330133afd45317a28.jpg)
+![Screenshot at 1:35:42 in the video](./images/image-cabd852330133afd45317a28.jpg)
 
 Finally, what we have is the epilogue, which is just writing out the data. You can trust me—you can take my word for it—but this is actually just the entire device code; it is under a hundred lines.
 
 ## [1:35:53](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5753)
 
-![Screenshot at 1:35:53 in the video](images/image-5bad064192537dbde31302c4.jpg)
+![Screenshot at 1:35:53 in the video](./images/image-5bad064192537dbde31302c4.jpg)
 
 If you tweak this kernel enough, you can get probably like 70 to 80 percent of what cuBLAS can get in terms of performance. So that's essentially tying everything
 
 ## [1:36:08](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5768)
 
-![Screenshot at 1:36:08 in the video](images/image-3a773e390f2f7eec6234b841.jpg)
+![Screenshot at 1:36:08 in the video](./images/image-3a773e390f2f7eec6234b841.jpg)
 
 together in terms of writing a performant GEMM in about a hundred lines of code. Now I'll go back to sharing my slides. We're almost at the end of it.
 
@@ -1197,19 +1197,19 @@ Yeah, thank you very, very much; you go so much into
 
 ## [1:36:28](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5788)
 
-![Screenshot at 1:36:28 in the video](images/image-4ba8b17cbb0c1be159e3cdf9.jpg)
+![Screenshot at 1:36:28 in the video](./images/image-4ba8b17cbb0c1be159e3cdf9.jpg)
 
 detail. I think for me it's a little bit of information overload. I'm very happy that we have recorded this session.
 
 ## [1:36:35](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5795)
 
-![Screenshot at 1:36:35 in the video](images/image-25c2bc3c6ce0cc505db93017.jpg)
+![Screenshot at 1:36:35 in the video](./images/image-25c2bc3c6ce0cc505db93017.jpg)
 
 Also, I feel that maybe in the future we may have some intermediate
 
 ## [1:36:40](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5800)
 
-![Screenshot at 1:36:40 in the video](images/image-fe6b15d38c0214cf128b1d96.jpg)
+![Screenshot at 1:36:40 in the video](./images/image-fe6b15d38c0214cf128b1d96.jpg)
 
 things, because we had one very—I would say—intro talk about CUTLASS and so on, and now we go, I would say, to the real needs of the things. And yeah, so, of course, thanks. It's super great to have this. But yeah, let's please continue. Yeah, exactly. So I mean, it takes a lot of time to get ramped up on this.
 
@@ -1217,7 +1217,7 @@ So at least I'm hopeful that this will be a placeholder for folks to go back and
 
 ## [1:37:07](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5827)
 
-![Screenshot at 1:37:07 in the video](images/image-2f8cb78423d0b51034cbfdf8.jpg)
+![Screenshot at 1:37:07 in the video](./images/image-2f8cb78423d0b51034cbfdf8.jpg)
 
 So, what we saw so far in the actual code walkthrough was just the 101-level optimizations implemented. None of the more advanced optimizations were actually implemented in that code example. I've just put them here in the slides, so that folks can essentially go over them at a later time if needed.
 
@@ -1227,25 +1227,25 @@ main loop overlapping with the epilogue, so that you can essentially make sure y
 
 ## [1:38:14](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5894)
 
-![Screenshot at 1:38:14 in the video](images/image-40b61cd13cb9544c4e067f60.jpg)
+![Screenshot at 1:38:14 in the video](./images/image-40b61cd13cb9544c4e067f60.jpg)
 
 So I will skip this portion in the interest of time, but the slides are there to go over, where we explain what is essentially the lifetime of a GEMM and how we break it into three sections.
 
 ## [1:38:27](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5907)
 
-![Screenshot at 1:38:27 in the video](images/image-fe5d2ff94917aacb4fa81576.jpg)
+![Screenshot at 1:38:27 in the video](./images/image-fe5d2ff94917aacb4fa81576.jpg)
 
 And then how it's scheduled on the GPU itself using different schedules. The high-level overview here is that it's a ping-pong schedule. You can see that the tensor core operations are overlapping with the epilogue here. And there are other schedules
 
 ## [1:38:43](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5923)
 
-![Screenshot at 1:38:43 in the video](images/image-c0865b8b255ecb6510861cfa.jpg)
+![Screenshot at 1:38:43 in the video](./images/image-c0865b8b255ecb6510861cfa.jpg)
 
 where the tensor core operations do not overlap with the epilogue, and there are benefits to each approach. Some perform better. So if you don't overlap them, you get better MMA utilization, but if you overlap them, there's more register pressure, and so on and so forth.
 
 ## [1:38:59](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5939)
 
-![Screenshot at 1:38:59 in the video](images/image-7b243c7c22d9bf263757d1df.jpg)
+![Screenshot at 1:38:59 in the video](./images/image-7b243c7c22d9bf263757d1df.jpg)
 
 So there are also optimizations beyond all of this, which are what we know as—we call them 5.0.1—advanced optimizations. They make sure you can get out every last bit of performance possible from the hardware itself. So now, this is essentially the value that CUTLASS brings. CUTLASS employs
 
@@ -1253,19 +1253,19 @@ So there are also optimizations beyond all of this, which are what we know as—
 
 ## [1:39:29](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5969)
 
-![Screenshot at 1:39:29 in the video](images/image-84c0111f387063e341784776.jpg)
+![Screenshot at 1:39:29 in the video](./images/image-84c0111f387063e341784776.jpg)
 
 Hopefully, you can see the benefits that CUTLASS brings in terms of what to use. I've also put a general recipe on when to use what. With this, it will just be left here for reference.
 
 ## [1:39:43](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5983)
 
-![Screenshot at 1:39:43 in the video](images/image-abf39c5e23236a7b414fe224.jpg)
+![Screenshot at 1:39:43 in the video](./images/image-abf39c5e23236a7b414fe224.jpg)
 
 And yeah, again, this is more rules of thumb. If you are looking at the profiler and you are not sure which kernel to pick, it also tells you—gives you information on—how to use which shape and when each of those things matter. And yep.
 
 ## [1:39:58](https://www.youtube.com/watch?v=hQ9GPnV0-50&t=5998)
 
-![Screenshot at 1:39:58 in the video](images/image-b4265f35b8ba240c77d8933e.jpg)
+![Screenshot at 1:39:58 in the video](./images/image-b4265f35b8ba240c77d8933e.jpg)
 
 I will leave it here. And thank you so much. Yeah, Pradeep, thank you very much, and also Vijay, for this really in-depth presentation about CUTLASS. For me, it was a little bit of information overload. I must say, at this point, for nearly two hours—not fully, but...
 
